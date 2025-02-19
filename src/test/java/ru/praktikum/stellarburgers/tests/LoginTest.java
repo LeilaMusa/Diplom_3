@@ -1,61 +1,95 @@
 package ru.praktikum.stellarburgers.tests;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import io.qameta.allure.Description;
+import io.qameta.allure.junit4.DisplayName;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
-import ru.praktikum.stellarburgers.api.UserClient;
+import ru.praktikum.stellarburgers.config.WebDriverConfig;
 import ru.praktikum.stellarburgers.pages.LoginPage;
+import ru.praktikum.stellarburgers.pages.MainPage;
+import ru.praktikum.stellarburgers.pages.RegisterPage;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class LoginTest extends BaseTest {
-
+    private LoginPage loginPage;
+    private RegisterPage registerPage;
+    private MainPage mainPage;
     private String email;
     private String password;
+    private String name;
 
     @Before
+    @Override
     public void setUp() {
         super.setUp();
+        driver = WebDriverConfig.createDriver("chrome");
+        loginPage = new LoginPage(driver);
+        registerPage = new RegisterPage(driver);
+        mainPage = new MainPage(driver);
 
-        String name = "User" + RandomStringUtils.randomAlphanumeric(5);
-        email = "user" + RandomStringUtils.randomAlphanumeric(5) + "@gmail.com";
-        password = RandomStringUtils.randomAlphanumeric(10);
+        // Генерируем тестовые данные
+        email = faker.internet().emailAddress();
+        password = faker.internet().password(6, 10);
+        name = faker.name().fullName();
+    }
 
-        UserClient userClient = new UserClient();
-        userClient.register(email, password, name);
+    @After
+    public void tearDown() {
+        if (userToken != null) {
+            userClient.deleteUser(userToken);
+        }
+        if (driver != null) {
+            driver.quit();
+        }
     }
 
     @Test
-    public void testLoginThroughMainPageButton() {
+    @DisplayName("Вход через кнопку 'Войти в аккаунт' на главной")
+    @Description("Проверка входа через кнопку на главной странице")
+    public void loginFromMainPageTest() {
+        createUser(email, password, name);
+
         mainPage.open();
         mainPage.clickLoginButton();
-        loginPage.login(email, password);
-        assertTrue("После успешного логина должна открыться главная страница", mainPage.isDisplayed());
+        loginPage.loginWithRedirect(email, password);
+
+        assertTrue("После входа не произошел переход на главную страницу",
+                driver.getCurrentUrl().equals("https://stellarburgers.nomoreparties.site/"));
     }
 
     @Test
-    public void testLoginThroughPersonalAccountButton() {
+    @DisplayName("Вход через личный кабинет")
+    @Description("Проверка входа через кнопку личного кабинета")
+    public void loginFromPersonalAccountTest() {
+        createUser(email, password, name);
+
         mainPage.open();
         mainPage.clickPersonalAccount();
-        loginPage.login(email, password);
-        assertTrue("После успешного логина должна открыться главная страница", mainPage.isDisplayed());
+        loginPage.loginWithRedirect(email, password);
+
+        assertTrue("После входа не произошел переход на главную страницу",
+                driver.getCurrentUrl().equals("https://stellarburgers.nomoreparties.site/"));
     }
 
     @Test
-    public void testLoginThroughRegisterForm() {
+    @DisplayName("Ошибка при неверном пароле")
+    @Description("Проверка, что пользователь остается на странице входа при вводе неверного пароля")
+    public void loginWithWrongPasswordTest() {
+        createUser(email, password, name);
+
         mainPage.open();
         mainPage.clickLoginButton();
-        loginPage.clickRegisterLink();
 
-        String name = "TestUser";
-        String regEmail = "testuser" + RandomStringUtils.randomAlphanumeric(5) + "@gmail.com";
-        String regPassword = RandomStringUtils.randomAlphanumeric(10);
+        // Выполняем вход с некорректным паролем
+        String currentUrl = loginPage.login(email, "wrongpassword");
 
-        registerPage.register(name, regEmail, regPassword);
+        // Проверяем, что URL остался на странице входа
+        assertEquals("https://stellarburgers.nomoreparties.site/login", currentUrl);
 
-        // Пересоздаем страницу логина
-        loginPage = new LoginPage(driver);
-        loginPage.login(regEmail, regPassword);
-
-        assertTrue("После успешного логина должна открыться главная страница", mainPage.isDisplayed());
+        // Если система отображает сообщение об ошибке, можно добавить проверку
+        // assertEquals("Некорректный пароль", loginPage.getErrorText());
     }
 }

@@ -1,30 +1,85 @@
 package ru.praktikum.stellarburgers.tests;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import io.qameta.allure.Description;
+import io.qameta.allure.junit4.DisplayName;
+import io.restassured.response.Response;
+import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
-import ru.praktikum.stellarburgers.pages.MainPage;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import ru.praktikum.stellarburgers.api.User;
+import ru.praktikum.stellarburgers.api.UserClient;
+import ru.praktikum.stellarburgers.config.WebDriverConfig;
 import ru.praktikum.stellarburgers.pages.RegisterPage;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+@RunWith(Parameterized.class)
 public class RegisterTest extends BaseTest {
+    private final String browser;
+    private RegisterPage registerPage;
+    private UserClient userClient;
+    private String email;
+    private String password;
+    private String name;
+
+    public RegisterTest(String browser) {
+        this.browser = browser;
+    }
+
+    @Parameterized.Parameters(name = "Browser: {0}")
+    public static Object[] getBrowsers() {
+        return new Object[]{"chrome", "yandex"};
+    }
+
+    @Before
+    @Override
+    public void setUp() {
+        super.setUp();
+        driver = WebDriverConfig.createDriver(browser);
+        registerPage = new RegisterPage(driver);
+        userClient = new UserClient();
+
+        email = faker.internet().emailAddress();
+        password = faker.internet().password(6, 10);
+        name = faker.name().fullName();
+    }
 
     @Test
-    public void testRegistrationWithShortPassword() {
-        // Генерация случайных данных для регистрации
-        String name = "User" + RandomStringUtils.randomAlphanumeric(5);
-        String email = "user" + RandomStringUtils.randomAlphanumeric(5) + "@gmail.com";
-        String shortPassword = "12345"; // Короткий пароль (меньше 6 символов)
+    @DisplayName("Успешная регистрация через API")
+    @Description("Проверка успешной регистрации нового пользователя через API")
+    public void successfulRegistrationViaApiTest() {
+        User user = new User(email, password, name);
+        Response response = userClient.createUser(user);
 
-        // Открываем страницу регистрации
-        mainPage.open();
-        mainPage.clickLoginButton();
-        loginPage.clickRegisterLink();
+        assertEquals(200, response.getStatusCode());
+        assertTrue(response.getBody().jsonPath().getBoolean("success"));
+    }
 
-        // Регистрация пользователя с коротким паролем
-        registerPage.register(name, email, shortPassword);
+    @Test
+    @DisplayName("Успешная регистрация через UI")
+    @Description("Проверка успешной регистрации нового пользователя через UI")
+    public void successfulRegistrationTest() {
+        registerPage.open();
+        registerPage.register(name, email, password);
 
-        // Проверяем, что появилось сообщение об ошибке
-        String errorMessage = registerPage.getPasswordError();
-        assertEquals("Сообщение об ошибке должно быть 'Некорректный пароль'", "Некорректный пароль", errorMessage);
+        assertTrue("Регистрация не была успешной",
+                driver.getCurrentUrl().contains("/login"));
+    }
+
+    @Test
+    @DisplayName("Ошибка при некорректном пароле")
+    @Description("Проверка ошибки при попытке регистрации с паролем менее 6 символов")
+    public void invalidPasswordRegistrationTest() {
+        String shortPassword = "12345"; // Пароль менее 6 символов
+
+        registerPage.open();
+        registerPage.setName(name);
+        registerPage.setEmail(email);
+        registerPage.setPassword(shortPassword);
+        registerPage.clickRegisterButton();
+
+        assertEquals("Некорректный пароль", registerPage.getErrorText());
     }
 }

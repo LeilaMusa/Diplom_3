@@ -1,40 +1,44 @@
 package ru.praktikum.stellarburgers.tests;
 
-import io.github.bonigarcia.wdm.WebDriverManager;
+import com.github.javafaker.Faker;
+import io.restassured.response.Response;
 import org.junit.After;
 import org.junit.Before;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
-import ru.praktikum.stellarburgers.pages.*;
+import ru.praktikum.stellarburgers.api.User;
+import ru.praktikum.stellarburgers.api.UserClient;
 
 public class BaseTest {
     protected WebDriver driver;
-    protected MainPage mainPage;
-    protected LoginPage loginPage;
-    protected ProfilePage profilePage;
-    protected ConstructorPage constructorPage;
-    protected RegisterPage registerPage;
+    protected UserClient userClient;
+    protected String userToken;
+    protected final Faker faker = new Faker();
 
     @Before
     public void setUp() {
-        WebDriverManager.chromedriver().setup();
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--remote-allow-origins=*");
-        driver = new ChromeDriver(options);
-        driver.manage().window().maximize();
-
-        mainPage = new MainPage(driver);
-        loginPage = new LoginPage(driver);
-        profilePage = new ProfilePage(driver);
-        constructorPage = new ConstructorPage(driver);
-        registerPage = new RegisterPage(driver);
+        userClient = new UserClient();
     }
 
     @After
     public void tearDown() {
-        if (driver != null) {
-            driver.quit();
+        if (userToken != null) {
+            userClient.deleteUser(userToken);
         }
+        if (driver != null) {
+            try {
+                driver.quit();
+            } catch (Exception e) {
+                System.out.println("Error while closing WebDriver: " + e.getMessage());
+            }
+        }
+    }
+
+    protected void createUser(String email, String password, String name) {
+        User user = new User(email, password, name);
+        Response response = userClient.createUser(user);
+        userToken = response.then()
+                .statusCode(200)
+                .extract()
+                .path("accessToken");
     }
 }

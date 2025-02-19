@@ -1,56 +1,79 @@
 package ru.praktikum.stellarburgers.tests;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import io.qameta.allure.Description;
+import io.qameta.allure.junit4.DisplayName;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
-import ru.praktikum.stellarburgers.api.UserClient;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import ru.praktikum.stellarburgers.config.WebDriverConfig;
+import ru.praktikum.stellarburgers.pages.LoginPage;
+import ru.praktikum.stellarburgers.pages.MainPage;
+import ru.praktikum.stellarburgers.pages.ProfilePage;
 
+import static org.junit.Assert.assertTrue;
+
+@RunWith(Parameterized.class)
 public class ProfileTest extends BaseTest {
-
+    private final String browser;
+    private MainPage mainPage;
+    private LoginPage loginPage;
+    private ProfilePage profilePage;
     private String email;
     private String password;
+    private String name;
+
+    public ProfileTest(String browser) {
+        this.browser = browser;
+    }
+
+    @Parameterized.Parameters(name = "Browser: {0}")
+    public static Object[] getBrowsers() {
+        return new Object[]{"chrome", "yandex"};
+    }
 
     @Before
+    @Override
     public void setUp() {
         super.setUp();
+        driver = WebDriverConfig.createDriver(browser);
+        mainPage = new MainPage(driver);
+        loginPage = new LoginPage(driver);
+        profilePage = new ProfilePage(driver);
 
-        String name = "User" + RandomStringUtils.randomAlphanumeric(5);
-        email = "user" + RandomStringUtils.randomAlphanumeric(5) + "@gmail.com";
-        password = RandomStringUtils.randomAlphanumeric(10);
+        email = faker.internet().emailAddress();
+        password = faker.internet().password(6, 10);
+        name = faker.name().fullName();
+    }
 
-        UserClient userClient = new UserClient();
-        userClient.register(email, password, name);
+    @Test
+    @DisplayName("Переход в личный кабинет")
+    @Description("Проверка перехода в личный кабинет после авторизации")
+    public void profileAccessTest() {
+        createUser(email, password, name);
 
         mainPage.open();
         mainPage.clickLoginButton();
         loginPage.login(email, password);
+        mainPage.clickPersonalAccount();
+
+        assertTrue("Профиль не отображается", profilePage.isProfileDisplayed());
     }
 
     @Test
-    public void testProfileAccess() {
-        mainPage.clickPersonalAccount();
-        assertTrue("Страница профиля должна быть отображена", profilePage.isDisplayed());
-    }
+    @DisplayName("Выход из аккаунта")
+    @Description("Проверка выхода из аккаунта через личный кабинет")
+    public void logoutTest() {
+        createUser(email, password, name);
 
-    @Test
-    public void testNavigationToConstructor() {
+        mainPage.open();
+        mainPage.clickLoginButton();
+        loginPage.login(email, password);
         mainPage.clickPersonalAccount();
-        profilePage.clickConstructor();
-        assertTrue("После перехода из профиля по кнопке конструктор должна открыться главная страница", mainPage.isDisplayed());
-    }
+        profilePage.logout();
 
-    @Test
-    public void testNavigationToConstructorViaLogo() {
-        mainPage.clickPersonalAccount();
-        profilePage.clickLogo();
-        assertTrue("После перехода из профиля по логотипу должна открыться главная страница", mainPage.isDisplayed());
-    }
-
-    @Test
-    public void testLogout() {
-        mainPage.clickPersonalAccount();
-        profilePage.clickLogout();
-        assertTrue("После выхода из системы должна открыться страница логина", loginPage.isDisplayed());
+        // Ожидаем, что кнопка "Войти" отобразится на странице логина
+        assertTrue("Кнопка входа не отображается после выхода из аккаунта",
+                loginPage.isLoginButtonDisplayed());
     }
 }

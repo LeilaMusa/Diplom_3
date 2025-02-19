@@ -1,28 +1,34 @@
 package ru.praktikum.stellarburgers.api;
 
-import io.restassured.RestAssured;
+import io.qameta.allure.Step;
 import io.restassured.response.Response;
+import static io.restassured.RestAssured.given;
 
 public class UserClient {
     private static final String BASE_URL = "https://stellarburgers.nomoreparties.site/api";
 
-    public Response register(String email, String password, String name) {
-        return RestAssured.given()
+    @Step("Создание пользователя через API")
+    public Response createUser(User user) {
+        return given()
                 .header("Content-type", "application/json")
-                .body(String.format("{\"email\": \"%s\", \"password\": \"%s\", \"name\": \"%s\"}", email, password, name))
+                .body(user)
                 .post(BASE_URL + "/auth/register");
     }
 
-    public Response login(String email, String password) {
-        return RestAssured.given()
-                .header("Content-type", "application/json")
-                .body(String.format("{\"email\":\"%s\", \"password\":\"%s\"}", email, password))
-                .post(BASE_URL + "/auth/login");
+    @Step("Удаление пользователя через API")
+    public void deleteUser(String token) {
+        given()
+                .header("Authorization", token)
+                .delete(BASE_URL + "/auth/user")
+                .then()
+                .statusCode(202);
     }
 
-    public Response deleteUser(String accessToken) {
-        return RestAssured.given()
-                .header("Authorization", accessToken)
-                .delete(BASE_URL + "/auth/user");
+    @Step("Логин пользователя через API")
+    public Response loginUser(User user) {
+        return given()
+                .header("Content-type", "application/json")
+                .body(user)
+                .post(BASE_URL + "/auth/login");
     }
 }
