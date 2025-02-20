@@ -6,8 +6,9 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import java.util.concurrent.TimeUnit;
 
 public class WebDriverConfig {
-    public static WebDriver createDriver(String browser) {
+    public static WebDriver createDriver() {
         ChromeOptions options = new ChromeOptions();
+        String browser = System.getProperty("browser", "chrome"); // По умолчанию chrome
 
         if ("yandex".equals(browser)) {
             System.setProperty("webdriver.chrome.driver", "drivers/yandexdriver.exe");
@@ -17,11 +18,9 @@ public class WebDriverConfig {
         }
 
         options.addArguments("--remote-allow-origins=*");
-        // Добавляем параметры для стабильной работы
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-notifications");
-        // Добавляем параметр для принудительного закрытия браузера
         options.addArguments("--disable-browser-side-navigation");
 
         WebDriver driver = new ChromeDriver(options);

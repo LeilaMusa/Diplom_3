@@ -25,7 +25,7 @@ public class LoginTest extends BaseTest {
     @Override
     public void setUp() {
         super.setUp();
-        driver = WebDriverConfig.createDriver("chrome");
+        driver = WebDriverConfig.createDriver();
         loginPage = new LoginPage(driver);
         registerPage = new RegisterPage(driver);
         mainPage = new MainPage(driver);
@@ -84,12 +84,9 @@ public class LoginTest extends BaseTest {
         mainPage.clickLoginButton();
 
         // Выполняем вход с некорректным паролем
-        String currentUrl = loginPage.login(email, "wrongpassword");
+        loginPage.login(email, "wrong");
 
-        // Проверяем, что URL остался на странице входа
-        assertEquals("https://stellarburgers.nomoreparties.site/login", currentUrl);
-
-        // Если система отображает сообщение об ошибке, можно добавить проверку
-        // assertEquals("Некорректный пароль", loginPage.getErrorText());
+        // Проверяем сообщение об ошибке
+        assertEquals("Некорректный пароль", loginPage.getErrorText());
     }
 }

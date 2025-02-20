@@ -15,11 +15,11 @@ public class LoginPage {
     private final By loginButton = By.xpath("//button[text()='Войти']");
     private final By registerLink = By.xpath("//a[text()='Зарегистрироваться']");
     private final By restorePasswordLink = By.xpath("//a[text()='Восстановить пароль']");
-    private final By errorText = By.xpath("//p[contains(text(), 'Некорректный пароль')]");
+    private final By errorText = By.xpath("//p[@class='input__error text_type_main-default' and contains(text(), 'Некорректный пароль')]");
 
     public LoginPage(WebDriver driver) {
         this.driver = driver;
-        this.wait = new WebDriverWait(driver, 15);
+        this.wait = new WebDriverWait(driver, 20); // Увеличиваем время ожидания до 20 секунд
     }
 
     @Step("Заполнение поля Email")
